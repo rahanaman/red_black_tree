@@ -22,12 +22,15 @@ void insertInt(rbnode** root, int x);
 void insert(rbnode **root, rbnode* x );
 void insertNode(rbnode** root, rbnode* parent, rbnode* x);
 void insertFixup(rbnode** root, rbnode* x);
+void rotFix(rbnode** root, rbnode* g, rbnode* x);
+void rightRot(rbnode** root, rbnode* x);
 
+void leftRot(rbnode** root, rbnode* x);
 //deletion
 void deleteInt(rbnode** root, int x);
 void delete(rbnode** root, rbnode* x);
 rbnode* deleteNode(rbnode** root, rbnode* x);
-void deleteFixup(rbnode** root, rbnode* x);
+void deleteFixup(rbnode** root, rbnode* x, rbnode* sibling);
 
 //traverse
 void printInorder(rbnode* root);
@@ -40,7 +43,6 @@ void printNode(rbnode* node);
 void traverse(traverseNode* list);
 void addtraverse(traverseNode* list, rbnode* node);
 
-
 rbnode* search(rbnode** root, int x);
 rbnode* searchLeftmost(rbnode** root);
 
@@ -48,25 +50,49 @@ rbnode** createTree();
 
 rbnode* newNode(int x);
 
+rbnode* sibling(rbnode* x);
+
 
 int main(){
 	rbnode** root = createTree();
-	insertInt(root, 5);
-	insertInt(root, 1);
-	insertInt(root, 2);
-	insertInt(root, 3);
-	insertInt(root, 4);
 	insertInt(root, 7);
-	insertInt(root, 6);
+
+	insertInt(root, 3);
+
+	insertInt(root, 18);
+
+	insertInt(root, 10);
+
+	insertInt(root, 22);
+
 	insertInt(root, 8);
-	deleteInt(root, 7);
-	deleteInt(root, 5);
+	insertInt(root, 11);
+	insertInt(root, 26);
+	insertInt(root, 2);
+	insertInt(root, 6);
+	insertInt(root, 13);
+	printInorder(*root);
+	printf("\n");
+	deleteInt(root, 18);
+	printInorder(*root);
+	printf("\n");
+	deleteInt(root, 11);
+	printInorder(*root);
+	printf("\n");
+	deleteInt(root, 3);
+	printInorder(*root);
+	printf("\n");
+	deleteInt(root, 10);
+	printInorder(*root);
+	printf("\n");
+	deleteInt(root, 22);
 	
 	printInorder(*root);
 	printf("\n");
 	printLevelorder(*root);
 	return 0; 
 }
+
 
 rbnode** createTree() {
 	
@@ -111,6 +137,7 @@ void insert(rbnode** root, rbnode* x) {
 	else {
 		printf("ERROR: already in tree.");
 		free(x);
+		return;
 	}
 	insertFixup(root, x);
 }
@@ -135,7 +162,120 @@ void insertNode(rbnode** root, rbnode* parent, rbnode* x) {
 }
 
 void insertFixup(rbnode** root, rbnode* x) {
+	if (x == NULL) return;
+	rbnode* p = x->parent;
+	if (p == NULL) {
+		x->color = BLACK;
+		return;
+	}
+	if (p->color == BLACK) return;
+	if (sibling(p) == NULL) {
+
+		rotFix(root, p->parent,x);
+	}
+	else if (sibling(p)->color == RED) {
+		rbnode* g = p->parent;
+		g->color = RED;
+		p->color = BLACK;
+		sibling(p)->color = BLACK;
+		insertFixup(root, g);
+	}
+	else {
+		rotFix(root, p->parent,x);
+	}
 	
+}
+
+void rotFix(rbnode** root, rbnode* g, rbnode* x) {
+	//g -> 할아버지
+	rbnode* p = x->parent;
+	if (x->key < g->key) {
+		
+		if (x->key < p->key) {
+			//LL
+			g->color = RED;
+			p->color = BLACK;
+			rightRot(root, g);
+		}
+		else {
+			//LR		
+			
+			x->color = BLACK;
+			g->color = RED;
+			leftRot(root, p);
+			rightRot(root, g);
+		}
+	}
+	else {
+		if (p->key < x->key) {
+			//RR
+			g->color = RED;
+			p->color = BLACK;
+			leftRot(root,g);
+		}
+		else {
+			//RL
+			g->color = RED;
+			x->color = BLACK;
+			rightRot(root,p);
+			leftRot(root,g);
+
+		}
+	}
+
+}
+
+
+
+void rightRot(rbnode** root, rbnode* x) {
+	rbnode* p = x->parent;
+	
+	rbnode* temp = x->left;
+	x->left = temp->right;
+
+	temp->parent = p;
+	
+	temp->right = x;
+	x->parent = temp;
+	if (p != NULL) {
+		if (p->key < temp->key)p->right = temp;
+		else p->left = temp;
+	}
+	else {
+		*root = temp;
+	}
+	
+	
+	return;
+}
+  
+void leftRot(rbnode** root, rbnode* x) {
+	rbnode* p = x->parent;
+	rbnode* temp = x->right;
+	temp->parent = p;
+	x->right = temp->left;
+	temp->left = x;
+	x->parent = temp;
+	if (p != NULL) {
+		if (p->key < temp->key)p->right = temp;
+		else p->left = temp;
+	}
+	else {
+		*root = temp;
+	}
+
+	
+	return;
+	
+	
+}
+
+rbnode* sibling(rbnode* x) {
+	rbnode* p = x->parent;
+	if (p->left == x) {
+		return p->right;
+	}
+	return p->left;
 }
 
 void deleteInt(rbnode** root, int x) {
@@ -144,8 +284,17 @@ void deleteInt(rbnode** root, int x) {
 }
 
 void delete(rbnode** root, rbnode* x) {
+	int color = x->color;
+	if (*root == x) {
+		rbnode* target = deleteNode(root, x);
+		(*root)->color = BLACK;
+		return;
+	}
+	rbnode* s = sibling(x);
 	rbnode* target = deleteNode(root, x);
-	deleteFixup(root, target);
+	if (color == BLACK) {
+		deleteFixup(root, target,s);
+	}
 }
 
 rbnode* deleteNode(rbnode** root, rbnode* x) {
@@ -191,9 +340,142 @@ rbnode* deleteNode(rbnode** root, rbnode* x) {
 	}
 }
 
-void deleteFixup(rbnode** root, rbnode* x) {
-	if (x == NULL) return;
+void deleteFixup(rbnode** root, rbnode* x, rbnode* sibling) {
+	if (x == NULL||x->color==BLACK) {
+		if (sibling == NULL) {
+			return;
+		}
+		rbnode* p = sibling->parent;
+		
+		if (p->key < sibling->key) {
+			if (sibling->color == RED) {
+				sibling->color = BLACK;
+				leftRot(root, p);
+				return;
+			}
+			else {
+				rbnode* l = sibling->left;
+				rbnode* r = sibling->right;
+				if (l == NULL && r == NULL) {
+					sibling->color = RED;
+					return;
 
+				}
+				else if (l == NULL) {
+					if (r->color == BLACK) {
+						sibling->color = RED;
+						return;
+					}
+					else {
+						//2-3
+						p->color = BLACK;
+						r -> color = BLACK;
+						leftRot(root, p);
+					}
+				}
+				else if (r == NULL) {
+					if (l->color == BLACK) {
+						sibling->color = RED;
+						return;
+					}
+					else {
+						//2-4
+						p->color = BLACK;
+						l->color = BLACK;
+						rightRot(root,sibling);
+						leftRot(root, p);
+					}
+				}
+				else {
+					if (r->color == BLACK&&l->color == BLACK) {
+						sibling->color = RED;
+						return;
+					}
+					else if (r->color == RED) {
+						//2-3
+						p->color = BLACK;
+						r->color = BLACK;
+						leftRot(root, p);
+					}
+					else {
+						//2-4
+						p->color = BLACK;
+						l->color = BLACK;
+
+
+						rightRot(root, sibling);
+						leftRot(root, p);
+					}
+				}
+			}
+		}
+		else {
+			if (sibling->color == RED) {
+				sibling->color = BLACK;
+				rightRot(root, p);
+			}
+			else {
+				rbnode* l = sibling->left;
+				rbnode* r = sibling->right;
+				if (l == NULL && r == NULL) {
+					sibling->color = RED;
+					return;
+				}
+				else if (l == NULL) {
+					if (r->color == BLACK) {
+						sibling->color = RED;
+						return;
+					}
+					else {
+						//2-4 rev
+						r->color = BLACK;
+						p->color = BLACK;
+						leftRot(root, sibling);
+						rightRot(root, p);
+					}
+				}
+				else if (r == NULL) {
+					if (l->color == BLACK) {
+						sibling->color = RED;
+						return;
+					}
+					else {
+						//2-3 rev
+						l->color = BLACK;
+						p->color = BLACK;
+						rightRot(root, p);
+					}
+				}
+				else {
+					if (r->color == BLACK && l->color == BLACK) {
+						sibling->color = RED;
+						return;
+					}
+					else if (r->color == RED) {
+						//2-4 rev
+						r->color = BLACK;
+						p->color = BLACK;
+						leftRot(root, sibling);
+						rightRot(root, p);
+					
+					}
+					else {
+						//2-3 rev
+						l->color = BLACK;
+						p->color = BLACK;
+						rightRot(root, p);
+					}
+				}
+			}
+		}
+		
+	}
+	if (x->color == RED) {
+		x->color = BLACK;
+		return;
+	}
+	
+	
 }
 
 rbnode* searchLeftmost(rbnode** root) {
@@ -227,10 +509,15 @@ void printInorder(rbnode* root) {
 	printInorder(root->left);
 	printNode(root);
 	
-	if (root->parent != NULL) {
+	/*if (root->parent != NULL) {
 		rbnode* p = root->parent;
 		printf("-> %d, ", p->key);
+		
 	}
+	if (root->color == RED) {
+		printf("RED,");
+	}
+	else printf("BLACK, ");*/
 	printInorder(root->right);
 	return;
 }
